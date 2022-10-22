@@ -95,7 +95,7 @@ public class RRTestingTeleop extends LinearOpMode {
                 drive.setWeightedDrivePower(new Pose2d(
                         input.getX(),
                         input.getY(),
-                        -gamepad1.right_stick_x));
+                        -gamepad1.right_stick_x * power * 0.5));
             }
 
             Lift.setTargetPosition(LiftEncoderValue);
