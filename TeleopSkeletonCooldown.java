@@ -1,33 +1,32 @@
 package org.firstinspires.ftc.teamcode.drive.code;
 
-import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
+//All of the imports we need
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
-import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
-
-@TeleOp(name = "TestingTeleop")
-//@Disabled
-public class TestingTeleop extends LinearOpMode {
+@TeleOp(name = "TeleopSkeletonCooldown", group = "SkeletonCode") //Establishes name and group
+@Disabled //Stops this code from appearing, just comment it out to include
+public class TeleopSkeletonCooldown extends LinearOpMode {
 
     DcMotor FrontLeft;
     DcMotor FrontRight;
     DcMotor BackLeft;
     DcMotor BackRight;
     DcMotor Lift;
+    //Declares our drivetrain motors, make sure to add any extra motors used
 
     Servo claw;
 
-    double power = 0.75;
-    boolean turboMode = false;
-    boolean mecanumdrive = true;
-    boolean fieldcentric = true;
+    double open = 0.11;
+    double closed = 0.001;
+
+    double power = 0.5; //Power Coefficient determines power to the wheel motors of robot
+    boolean turboMode = false; //Turbomode puts the robot at 100% power in the wheel motors
+    boolean clawisclosed = true;
 
     double leftTriggerStartTime = 0;
     double leftBumperStartTime = 0;
@@ -44,69 +43,66 @@ public class TestingTeleop extends LinearOpMode {
     //Values for button cooldowns
 
     int LiftEncoderValue = 0;
-    int ground = 0;
-    int low = 333;
-    int mid = 533;
+    int ground = 20;
+    int low = 125;
+    int mid = 240;
 
-    double open = 0.001;
-    double closed = 0.25;
-
-    boolean clawisclosed = true;
-
-    BNO055IMU imu;
-
-    double initheading;
-
+    @Override
     public void runOpMode() {
+
         FrontLeft = hardwareMap.dcMotor.get("Front Left");
         FrontRight = hardwareMap.dcMotor.get("Front Right");
         BackLeft = hardwareMap.dcMotor.get("Back Left");
         BackRight = hardwareMap.dcMotor.get("Back Right");
         Lift = hardwareMap.dcMotor.get("Lift");
+        //Declares Hardwaremap stuff, make sure to add for extra motors
 
         claw = hardwareMap.servo.get("claw");
 
         FrontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
         BackLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        BackRight.setDirection(DcMotorSimple.Direction.REVERSE);
         Lift.setDirection(DcMotorSimple.Direction.REVERSE);
+        //Correcting the direction of drivetrain motors, if auto doesnt move right check this first
 
         Lift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         Lift.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        imu = hardwareMap.get(BNO055IMU.class, "imu");
-        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
-        imu.initialize(parameters);
-
-        double initheading = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.YXZ, AngleUnit.RADIANS).secondAngle;
-
         claw.setPosition(closed);
-
-        telemetry.addData("Ready to start", null);
-        telemetry.update();
 
         waitForStart();
 
         while (opModeIsActive()) {
-            if(mecanumdrive) {mecanumDrive();}
-            else {tankDrive();}
+            //Put any Telemetry you want in here
+            defaultMode();
         }
-
     }
 
     public void defaultMode() {
+        //Switches full speed on and off
+        if (gamepad1.left_bumper && leftBumperCooldown()) {
+            turboMode = !turboMode;
+        }
+
+        //Tank Drive Movement
+        if (turboMode) {
+            FrontLeft.setPower(gamepad1.left_stick_y);
+            FrontRight.setPower(gamepad1.right_stick_y);
+            BackLeft.setPower(gamepad1.left_stick_y);
+            BackRight.setPower(gamepad1.right_stick_y);
+        } else {
+            FrontLeft.setPower(gamepad1.left_stick_y * power);
+            FrontRight.setPower(gamepad1.right_stick_y * power);
+            BackLeft.setPower(gamepad1.left_stick_y * power);
+            BackRight.setPower(gamepad1.right_stick_y * power);
+        }
+
         Lift.setTargetPosition(LiftEncoderValue);
         Lift.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         Lift.setPower(1);
 
-        telemetry.addData("field centric:", fieldcentric);
-        telemetry.addData("mecanum mode:", mecanumdrive);
+        telemetry.addData("turbomode:", turboMode);
         telemetry.addData("lift target:", Lift.getTargetPosition());
         telemetry.addData("lift position:", Lift.getCurrentPosition());
-        telemetry.addData("y:", imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.YXZ, AngleUnit.RADIANS).firstAngle);
-        telemetry.addData("x:", imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.YXZ, AngleUnit.RADIANS).secondAngle);
-        telemetry.addData("z:", imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.YXZ, AngleUnit.RADIANS).thirdAngle);
-        telemetry.addData("bot heading:", imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.YXZ, AngleUnit.RADIANS).secondAngle - initheading);
         telemetry.update();
 
         //Other Controller Inputs
@@ -114,10 +110,6 @@ public class TestingTeleop extends LinearOpMode {
             clawisclosed = !clawisclosed;
             if(clawisclosed){claw.setPosition(closed);}
             if(!clawisclosed){claw.setPosition(open);}
-        }
-
-        if (gamepad1.left_bumper && leftBumperCooldown()) {
-            fieldcentric = !fieldcentric;
         }
 
         if (gamepad1.left_trigger > 0.5 && leftTriggerCooldown()) {
@@ -129,7 +121,7 @@ public class TestingTeleop extends LinearOpMode {
         }
 
         if (gamepad1.b && bCooldown()) {
-            mecanumdrive = !mecanumdrive;
+
         }
 
         if (gamepad1.y && yCooldown()) {
@@ -160,96 +152,6 @@ public class TestingTeleop extends LinearOpMode {
 
         }
 
-    }
-
-    public void mecanumDrive() {
-        if(fieldcentric){
-            if(turboMode){
-                double botHeading = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.YXZ, AngleUnit.RADIANS).secondAngle + Math.PI / 2;
-                double y = -gamepad1.left_stick_y;
-                double x = gamepad1.left_stick_x * 1.1;
-                double rot = -gamepad1.right_stick_x * 0.5;
-
-                double rotX = x * Math.cos(botHeading) - y * Math.sin(botHeading);
-                double rotY = x * Math.sin(botHeading) + y * Math.cos(botHeading);
-
-                double denom = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rot), 1);
-                double v1 = (rotY + rotX + rot) / denom;
-                double v2 = (rotY - rotX + rot) / denom;
-                double v3 = (rotY - rotX - rot) / denom;
-                double v4 = (rotY + rotX - rot) / denom;
-
-                FrontLeft.setPower(v1);
-                BackLeft.setPower(v2);
-                FrontRight.setPower(v3);
-                BackRight.setPower(v4);
-            } else {
-                double botHeading = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.YXZ, AngleUnit.RADIANS).secondAngle + Math.PI / 2;
-                double y = -gamepad1.left_stick_y * power;
-                double x = gamepad1.left_stick_x * 1.1 * power;
-                double rot = -gamepad1.right_stick_x * 0.5 * power;
-
-                double rotX = x * Math.cos(botHeading) - y * Math.sin(botHeading);
-                double rotY = x * Math.sin(botHeading) + y * Math.cos(botHeading);
-
-                double denom = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rot), 1);
-                double v1 = (rotY + rotX + rot) / denom;
-                double v2 = (rotY - rotX + rot) / denom;
-                double v3 = (rotY - rotX - rot) / denom;
-                double v4 = (rotY + rotX - rot) / denom;
-
-                FrontLeft.setPower(v1);
-                BackLeft.setPower(v2);
-                FrontRight.setPower(v3);
-                BackRight.setPower(v4);
-            }
-        } else {
-            if(turboMode){
-                double r = Math.hypot(-gamepad1.left_stick_x, gamepad1.left_stick_y);
-                double θ = Math.atan2(gamepad1.left_stick_y, -gamepad1.left_stick_x) - Math.PI / 4;
-                double rot = -gamepad1.right_stick_x * 0.5;
-
-                final double v1 = r * Math.cos(θ) + rot;
-                final double v2 = r * Math.sin(θ) - rot;
-                final double v3 = r * Math.sin(θ) + rot;
-                final double v4 = r * Math.cos(θ) - rot;
-
-                FrontLeft.setPower(v1);
-                FrontRight.setPower(v2);
-                BackLeft.setPower(v3);
-                BackRight.setPower(v4);
-            } else {
-                double r = Math.hypot(-gamepad1.left_stick_x * power, gamepad1.left_stick_y * power);
-                double θ = Math.atan2(gamepad1.left_stick_y * power, -gamepad1.left_stick_x * power) - Math.PI / 4;
-                double rot = -gamepad1.right_stick_x * power * 0.5;
-
-                final double v1 = r * Math.cos(θ) + rot;
-                final double v2 = r * Math.sin(θ) - rot;
-                final double v3 = r * Math.sin(θ) + rot;
-                final double v4 = r * Math.cos(θ) - rot;
-
-                FrontLeft.setPower(v1);
-                FrontRight.setPower(v2);
-                BackLeft.setPower(v3);
-                BackRight.setPower(v4);
-            }
-        }
-        defaultMode();
-    }
-
-    public void tankDrive() {
-        if (turboMode) {
-            FrontLeft.setPower(gamepad1.left_stick_y);
-            FrontRight.setPower(gamepad1.right_stick_y);
-            BackLeft.setPower(gamepad1.left_stick_y);
-            BackRight.setPower(gamepad1.right_stick_y);
-        } else {
-            FrontLeft.setPower(gamepad1.left_stick_y * power);
-            FrontRight.setPower(gamepad1.right_stick_y * power);
-            BackLeft.setPower(gamepad1.left_stick_y * power);
-            BackRight.setPower(gamepad1.right_stick_y * power);
-        }
-        defaultMode();
     }
 
     //Input Cooldowns

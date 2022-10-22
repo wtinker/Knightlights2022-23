@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.drive.code;
 
+import com.acmerobotics.roadrunner.geometry.Pose2d;
+import com.acmerobotics.roadrunner.geometry.Vector2d;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -11,22 +13,17 @@ import com.qualcomm.robotcore.hardware.Servo;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
 
-@TeleOp(name = "TestingTeleop")
+@TeleOp(name = "RRTestingTeleop")
 //@Disabled
-public class TestingTeleop extends LinearOpMode {
+public class RRTestingTeleop extends LinearOpMode {
 
-    DcMotor FrontLeft;
-    DcMotor FrontRight;
-    DcMotor BackLeft;
-    DcMotor BackRight;
     DcMotor Lift;
 
     Servo claw;
 
     double power = 0.75;
-    boolean turboMode = false;
-    boolean mecanumdrive = true;
     boolean fieldcentric = true;
 
     double leftTriggerStartTime = 0;
@@ -55,20 +52,13 @@ public class TestingTeleop extends LinearOpMode {
 
     BNO055IMU imu;
 
-    double initheading;
-
     public void runOpMode() {
-        FrontLeft = hardwareMap.dcMotor.get("Front Left");
-        FrontRight = hardwareMap.dcMotor.get("Front Right");
-        BackLeft = hardwareMap.dcMotor.get("Back Left");
-        BackRight = hardwareMap.dcMotor.get("Back Right");
+        SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);
+
         Lift = hardwareMap.dcMotor.get("Lift");
 
         claw = hardwareMap.servo.get("claw");
 
-        FrontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        BackLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        BackRight.setDirection(DcMotorSimple.Direction.REVERSE);
         Lift.setDirection(DcMotorSimple.Direction.REVERSE);
 
         Lift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -78,8 +68,6 @@ public class TestingTeleop extends LinearOpMode {
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
         imu.initialize(parameters);
 
-        double initheading = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.YXZ, AngleUnit.RADIANS).secondAngle;
-
         claw.setPosition(closed);
 
         telemetry.addData("Ready to start", null);
@@ -88,27 +76,39 @@ public class TestingTeleop extends LinearOpMode {
         waitForStart();
 
         while (opModeIsActive()) {
-            if(mecanumdrive) {mecanumDrive();}
-            else {tankDrive();}
+            drive.update();
+            Pose2d myPose = drive.getPoseEstimate();
+            if(fieldcentric){
+                Vector2d input = new Vector2d(
+                        -gamepad1.left_stick_y * power,
+                        -gamepad1.left_stick_x * power
+                ).rotated(-myPose.getHeading());
+                drive.setWeightedDrivePower(new Pose2d(
+                        input.getX(),
+                        input.getY(),
+                        -gamepad1.right_stick_x * power * 0.5));
+            } else {
+                Vector2d input = new Vector2d(
+                        -gamepad1.left_stick_y * power,
+                        -gamepad1.left_stick_x * power
+                );
+                drive.setWeightedDrivePower(new Pose2d(
+                        input.getX(),
+                        input.getY(),
+                        -gamepad1.right_stick_x));
+            }
+
+            Lift.setTargetPosition(LiftEncoderValue);
+            Lift.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            Lift.setPower(1);
+
+            defaultMode();
+            composeTelemetry();
         }
 
     }
 
     public void defaultMode() {
-        Lift.setTargetPosition(LiftEncoderValue);
-        Lift.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        Lift.setPower(1);
-
-        telemetry.addData("field centric:", fieldcentric);
-        telemetry.addData("mecanum mode:", mecanumdrive);
-        telemetry.addData("lift target:", Lift.getTargetPosition());
-        telemetry.addData("lift position:", Lift.getCurrentPosition());
-        telemetry.addData("y:", imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.YXZ, AngleUnit.RADIANS).firstAngle);
-        telemetry.addData("x:", imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.YXZ, AngleUnit.RADIANS).secondAngle);
-        telemetry.addData("z:", imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.YXZ, AngleUnit.RADIANS).thirdAngle);
-        telemetry.addData("bot heading:", imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.YXZ, AngleUnit.RADIANS).secondAngle - initheading);
-        telemetry.update();
-
         //Other Controller Inputs
         if (gamepad1.right_bumper && rightBumperCooldown()) {
             clawisclosed = !clawisclosed;
@@ -129,7 +129,7 @@ public class TestingTeleop extends LinearOpMode {
         }
 
         if (gamepad1.b && bCooldown()) {
-            mecanumdrive = !mecanumdrive;
+
         }
 
         if (gamepad1.y && yCooldown()) {
@@ -162,94 +162,11 @@ public class TestingTeleop extends LinearOpMode {
 
     }
 
-    public void mecanumDrive() {
-        if(fieldcentric){
-            if(turboMode){
-                double botHeading = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.YXZ, AngleUnit.RADIANS).secondAngle + Math.PI / 2;
-                double y = -gamepad1.left_stick_y;
-                double x = gamepad1.left_stick_x * 1.1;
-                double rot = -gamepad1.right_stick_x * 0.5;
-
-                double rotX = x * Math.cos(botHeading) - y * Math.sin(botHeading);
-                double rotY = x * Math.sin(botHeading) + y * Math.cos(botHeading);
-
-                double denom = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rot), 1);
-                double v1 = (rotY + rotX + rot) / denom;
-                double v2 = (rotY - rotX + rot) / denom;
-                double v3 = (rotY - rotX - rot) / denom;
-                double v4 = (rotY + rotX - rot) / denom;
-
-                FrontLeft.setPower(v1);
-                BackLeft.setPower(v2);
-                FrontRight.setPower(v3);
-                BackRight.setPower(v4);
-            } else {
-                double botHeading = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.YXZ, AngleUnit.RADIANS).secondAngle + Math.PI / 2;
-                double y = -gamepad1.left_stick_y * power;
-                double x = gamepad1.left_stick_x * 1.1 * power;
-                double rot = -gamepad1.right_stick_x * 0.5 * power;
-
-                double rotX = x * Math.cos(botHeading) - y * Math.sin(botHeading);
-                double rotY = x * Math.sin(botHeading) + y * Math.cos(botHeading);
-
-                double denom = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rot), 1);
-                double v1 = (rotY + rotX + rot) / denom;
-                double v2 = (rotY - rotX + rot) / denom;
-                double v3 = (rotY - rotX - rot) / denom;
-                double v4 = (rotY + rotX - rot) / denom;
-
-                FrontLeft.setPower(v1);
-                BackLeft.setPower(v2);
-                FrontRight.setPower(v3);
-                BackRight.setPower(v4);
-            }
-        } else {
-            if(turboMode){
-                double r = Math.hypot(-gamepad1.left_stick_x, gamepad1.left_stick_y);
-                double θ = Math.atan2(gamepad1.left_stick_y, -gamepad1.left_stick_x) - Math.PI / 4;
-                double rot = -gamepad1.right_stick_x * 0.5;
-
-                final double v1 = r * Math.cos(θ) + rot;
-                final double v2 = r * Math.sin(θ) - rot;
-                final double v3 = r * Math.sin(θ) + rot;
-                final double v4 = r * Math.cos(θ) - rot;
-
-                FrontLeft.setPower(v1);
-                FrontRight.setPower(v2);
-                BackLeft.setPower(v3);
-                BackRight.setPower(v4);
-            } else {
-                double r = Math.hypot(-gamepad1.left_stick_x * power, gamepad1.left_stick_y * power);
-                double θ = Math.atan2(gamepad1.left_stick_y * power, -gamepad1.left_stick_x * power) - Math.PI / 4;
-                double rot = -gamepad1.right_stick_x * power * 0.5;
-
-                final double v1 = r * Math.cos(θ) + rot;
-                final double v2 = r * Math.sin(θ) - rot;
-                final double v3 = r * Math.sin(θ) + rot;
-                final double v4 = r * Math.cos(θ) - rot;
-
-                FrontLeft.setPower(v1);
-                FrontRight.setPower(v2);
-                BackLeft.setPower(v3);
-                BackRight.setPower(v4);
-            }
-        }
-        defaultMode();
-    }
-
-    public void tankDrive() {
-        if (turboMode) {
-            FrontLeft.setPower(gamepad1.left_stick_y);
-            FrontRight.setPower(gamepad1.right_stick_y);
-            BackLeft.setPower(gamepad1.left_stick_y);
-            BackRight.setPower(gamepad1.right_stick_y);
-        } else {
-            FrontLeft.setPower(gamepad1.left_stick_y * power);
-            FrontRight.setPower(gamepad1.right_stick_y * power);
-            BackLeft.setPower(gamepad1.left_stick_y * power);
-            BackRight.setPower(gamepad1.right_stick_y * power);
-        }
-        defaultMode();
+    public void composeTelemetry(){
+        telemetry.addData("field centric:", fieldcentric);
+        telemetry.addData("lift target:", Lift.getTargetPosition());
+        telemetry.addData("lift position:", Lift.getCurrentPosition());
+        telemetry.update();
     }
 
     //Input Cooldowns
