@@ -16,10 +16,10 @@ import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
 import org.firstinspires.ftc.teamcode.trajectorysequence.TrajectorySequence;
 import org.firstinspires.ftc.teamcode.trajectorysequence.TrajectorySequenceBuilder;
 
-@Autonomous(name = "Red F2", group = "comp")
-public class RedF2 extends LinearOpMode{
+@Autonomous(name = "Blue A5 Parking Only", group = "comp")
+public class BlueA5park extends LinearOpMode{
 
-    Pose2d startpose = new Pose2d(-40.5, -68, Math.toRadians(90));
+    Pose2d startpose = new Pose2d(40.5, 68, Math.toRadians(270));
     boolean zone1 = false;
     boolean zone2 = false;
     boolean zone3 = false;
@@ -65,7 +65,7 @@ public class RedF2 extends LinearOpMode{
         TrajectorySequence traj1 = drive.trajectorySequenceBuilder(startpose)
                 .setVelConstraint(new TranslationalVelocityConstraint(24))
                 .setTurnConstraint(Math.toRadians(90), Math.toRadians(90))
-                .splineToConstantHeading(new Vector2d(-39, -41), Math.toRadians(270))
+                .splineToConstantHeading(new Vector2d(39, 41), Math.toRadians(270))
                 .waitSeconds(1)
                 .addDisplacementMarker(() -> {
                     //scan code here
@@ -77,17 +77,8 @@ public class RedF2 extends LinearOpMode{
                     if(Math.abs(PoseStorage.gr - color.red()) < error && Math.abs(PoseStorage.gg - color.green()) < error && Math.abs(PoseStorage.gb - color.blue()) < error){telemetry.addData("Detecting green", null); zone3 = true;}
                     telemetry.update();
                 })
-                .splineToConstantHeading(new Vector2d(-36, -36), Math.toRadians(270))
+                .splineToConstantHeading(new Vector2d(36, 36), Math.toRadians(270))
                 .turn(Math.toRadians(-45))
-                .forward(11)
-                .turn(Math.toRadians(-15))
-                .addDisplacementMarker(() -> {
-                    //cone scoring
-                    claw.setPosition(open);
-                    sleep(500);
-                })
-                .turn(Math.toRadians(15))
-                .back(11)
                 .build();
 
         TrajectorySequence traj2 = drive.trajectorySequenceBuilder(traj1.end())

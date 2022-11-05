@@ -13,8 +13,8 @@ import com.qualcomm.robotcore.hardware.Servo;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
 
-@TeleOp(name = "Tournament TeleOp - Blue", group = "comp")
-public class Teleop extends LinearOpMode {
+@TeleOp(name = "Tournament TeleOp - Red", group = "comp")
+public class Teleop2 extends LinearOpMode {
 
     DcMotor Lift;
 
@@ -89,7 +89,7 @@ public class Teleop extends LinearOpMode {
                 Vector2d input = new Vector2d(
                         -gamepad1.left_stick_y * power,
                         -gamepad1.left_stick_x * power
-                ).rotated(-myPose.getHeading() - Math.toRadians(90));
+                ).rotated(-myPose.getHeading() + Math.toRadians(90));
                 drive.setWeightedDrivePower(new Pose2d(
                         input.getX(),
                         input.getY(),

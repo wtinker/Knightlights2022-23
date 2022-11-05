@@ -72,9 +72,9 @@ public class BlueA5 extends LinearOpMode{
                     telemetry.addData("Blue:", color.blue());
                     telemetry.addData("Red:", color.red());
                     telemetry.addData("Green:", color.green());
-                    if(Math.abs(br - color.red()) < error && Math.abs(bg - color.green()) < error && Math.abs(bb - color.blue()) < error){telemetry.addData("Detecting blue", null); zone1 = true;}
-                    if(Math.abs(rr - color.red()) < error && Math.abs(rg - color.green()) < error && Math.abs(rb - color.blue()) < error){telemetry.addData("Detecting red", null); zone2 = true;}
-                    if(Math.abs(gr - color.red()) < error && Math.abs(gg - color.green()) < error && Math.abs(gb - color.blue()) < error){telemetry.addData("Detecting green", null); zone3 = true;}
+                    if(Math.abs(PoseStorage.br - color.red()) < error && Math.abs(PoseStorage.bg - color.green()) < error && Math.abs(PoseStorage.bb - color.blue()) < error){telemetry.addData("Detecting blue", null); zone1 = true;}
+                    if(Math.abs(PoseStorage.rr - color.red()) < error && Math.abs(PoseStorage.rg - color.green()) < error && Math.abs(PoseStorage.rb - color.blue()) < error){telemetry.addData("Detecting red", null); zone2 = true;}
+                    if(Math.abs(PoseStorage.gr - color.red()) < error && Math.abs(PoseStorage.gg - color.green()) < error && Math.abs(PoseStorage.gb - color.blue()) < error){telemetry.addData("Detecting green", null); zone3 = true;}
                     telemetry.update();
                 })
                 .splineToConstantHeading(new Vector2d(36, 36), Math.toRadians(270))
@@ -91,16 +91,22 @@ public class BlueA5 extends LinearOpMode{
                 .build();
 
         TrajectorySequence traj2 = drive.trajectorySequenceBuilder(traj1.end())
+                .setVelConstraint(new TranslationalVelocityConstraint(10))
+                .setTurnConstraint(Math.toRadians(90), Math.toRadians(90))
                 .turn(Math.toRadians(-45))
                 .forward(24)
                 .turn(Math.toRadians(-90))
                 .build();
 
         TrajectorySequence traj3 = drive.trajectorySequenceBuilder(traj1.end())
+                .setVelConstraint(new TranslationalVelocityConstraint(10))
+                .setTurnConstraint(Math.toRadians(90), Math.toRadians(90))
                 .turn(Math.toRadians(-135))
                 .build();
 
         TrajectorySequence traj4 = drive.trajectorySequenceBuilder(traj1.end())
+                .setVelConstraint(new TranslationalVelocityConstraint(10))
+                .setTurnConstraint(Math.toRadians(90), Math.toRadians(90))
                 .turn(Math.toRadians(135))
                 .forward(24)
                 .turn(Math.toRadians(90))
@@ -125,8 +131,11 @@ public class BlueA5 extends LinearOpMode{
         else if(zone2){drive.followTrajectorySequence(traj3);}
         else if(zone3){drive.followTrajectorySequence(traj4);}
 
-        Lift.setTargetPosition(ground);
-        Lift.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        while (Lift.getTargetPosition() > ground){
+            Lift.setTargetPosition(Lift.getTargetPosition() - 20);
+            Lift.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            sleep(100);
+        }
         sleep(500);
 
         PoseStorage.transferpose = drive.getPoseEstimate();

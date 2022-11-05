@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.drive.code.tournament;
 import com.acmerobotics.roadrunner.geometry.Pose2d;
 import com.acmerobotics.roadrunner.geometry.Vector2d;
 import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -13,8 +14,8 @@ import com.qualcomm.robotcore.hardware.Servo;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
 
-@TeleOp(name = "Tournament TeleOp - Blue", group = "comp")
-public class Teleop extends LinearOpMode {
+@TeleOp(name = "Demo TeleOp", group = "comp")
+public class Teleop3 extends LinearOpMode {
 
     DcMotor Lift;
 
@@ -22,6 +23,7 @@ public class Teleop extends LinearOpMode {
 
     double power = 0.75;
     boolean fieldcentric = true;
+    boolean driving = false;
 
     double leftTriggerStartTime = 0;
     double leftBumperStartTime = 0;
@@ -55,6 +57,11 @@ public class Teleop extends LinearOpMode {
 
     int junctiondistance;
 
+    RevBlinkinLedDriver LED;
+
+    RevBlinkinLedDriver.BlinkinPattern red;
+    RevBlinkinLedDriver.BlinkinPattern blue;
+
     public void runOpMode() {
         SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);
 
@@ -65,6 +72,11 @@ public class Teleop extends LinearOpMode {
         claw = hardwareMap.servo.get("claw");
 
         juncdist = hardwareMap.get(DistanceSensor.class, "dist");
+
+        LED = hardwareMap.get(RevBlinkinLedDriver.class, "LED");
+
+        red = RevBlinkinLedDriver.BlinkinPattern.RED;
+        blue = RevBlinkinLedDriver.BlinkinPattern.BLUE;
 
         Lift.setDirection(DcMotorSimple.Direction.REVERSE);
 
@@ -83,26 +95,28 @@ public class Teleop extends LinearOpMode {
         waitForStart();
 
         while (opModeIsActive()) {
-            drive.update();
-            Pose2d myPose = drive.getPoseEstimate();
-            if(fieldcentric){
-                Vector2d input = new Vector2d(
-                        -gamepad1.left_stick_y * power,
-                        -gamepad1.left_stick_x * power
-                ).rotated(-myPose.getHeading() - Math.toRadians(90));
-                drive.setWeightedDrivePower(new Pose2d(
-                        input.getX(),
-                        input.getY(),
-                        -gamepad1.right_stick_x * power * 0.5));
-            } else {
-                Vector2d input = new Vector2d(
-                        -gamepad1.left_stick_y * power,
-                        -gamepad1.left_stick_x * power
-                );
-                drive.setWeightedDrivePower(new Pose2d(
-                        input.getX(),
-                        input.getY(),
-                        -gamepad1.right_stick_x * power * 0.5));
+            if(driving) {
+                drive.update();
+                Pose2d myPose = drive.getPoseEstimate();
+                if (fieldcentric) {
+                    Vector2d input = new Vector2d(
+                            -gamepad1.left_stick_y * power,
+                            -gamepad1.left_stick_x * power
+                    ).rotated(-myPose.getHeading() - Math.toRadians(90));
+                    drive.setWeightedDrivePower(new Pose2d(
+                            input.getX(),
+                            input.getY(),
+                            -gamepad1.right_stick_x * power * 0.5));
+                } else {
+                    Vector2d input = new Vector2d(
+                            -gamepad1.left_stick_y * power,
+                            -gamepad1.left_stick_x * power
+                    );
+                    drive.setWeightedDrivePower(new Pose2d(
+                            input.getX(),
+                            input.getY(),
+                            -gamepad1.right_stick_x * power * 0.5));
+                }
             }
 
             Lift.setTargetPosition(LiftEncoderValue);
@@ -136,7 +150,7 @@ public class Teleop extends LinearOpMode {
         }
 
         if (gamepad1.b && bCooldown()) {
-
+            driving = !driving;
         }
 
         if (gamepad1.y && yCooldown()) {
@@ -163,11 +177,11 @@ public class Teleop extends LinearOpMode {
         }
 
         if(gamepad1.dpad_left && leftCooldown()) {
-
+            LED.setPattern(blue);
         }
 
         if(gamepad1.dpad_right && rightCooldown()) {
-
+            LED.setPattern(red);
         }
 
         if(lowering){
@@ -178,6 +192,7 @@ public class Teleop extends LinearOpMode {
     }
 
     public void composeTelemetry(){
+        telemetry.addData("driving:", driving);
         telemetry.addData("field centric:", fieldcentric);
         telemetry.addData("lift target:", Lift.getTargetPosition());
         telemetry.addData("lift position:", Lift.getCurrentPosition());

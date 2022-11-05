@@ -16,8 +16,8 @@ import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
 import org.firstinspires.ftc.teamcode.trajectorysequence.TrajectorySequence;
 import org.firstinspires.ftc.teamcode.trajectorysequence.TrajectorySequenceBuilder;
 
-@Autonomous(name = "Red F2", group = "comp")
-public class RedF2 extends LinearOpMode{
+@Autonomous(name = "Red F2 Parking Only", group = "comp")
+public class RedF2park extends LinearOpMode{
 
     Pose2d startpose = new Pose2d(-40.5, -68, Math.toRadians(90));
     boolean zone1 = false;
@@ -79,15 +79,6 @@ public class RedF2 extends LinearOpMode{
                 })
                 .splineToConstantHeading(new Vector2d(-36, -36), Math.toRadians(270))
                 .turn(Math.toRadians(-45))
-                .forward(11)
-                .turn(Math.toRadians(-15))
-                .addDisplacementMarker(() -> {
-                    //cone scoring
-                    claw.setPosition(open);
-                    sleep(500);
-                })
-                .turn(Math.toRadians(15))
-                .back(11)
                 .build();
 
         TrajectorySequence traj2 = drive.trajectorySequenceBuilder(traj1.end())
