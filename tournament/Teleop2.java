@@ -6,9 +6,11 @@ import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.exception.RobotCoreException;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
+import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -24,18 +26,10 @@ public class Teleop2 extends LinearOpMode {
     double power = 0.5;
     boolean fieldcentric = true;
 
-    double leftTriggerStartTime = 0;
-    double leftBumperStartTime = 0;
-    double rightBumperStartTime = 0;
-    double rightTriggerStartTime = 0;
-    double bStartTime = 0;
+    Gamepad prevGamepad = new Gamepad();
+
     double yStartTime = 0;
     double aStartTime = 0;
-    double xStartTime = 0;
-    double upStartTime = 0;
-    double downStartTime = 0;
-    double leftStartTime = 0;
-    double rightStartTime = 0;
     double dropStartTime = 0;
     double timer;
     //Values for button cooldowns
@@ -153,31 +147,36 @@ public class Teleop2 extends LinearOpMode {
             runColors();
             defaultMode();
             composeTelemetry();
+            try {
+                prevGamepad.copy(gamepad1);
+            } catch (RobotCoreException e) {
+
+            }
         }
 
     }
 
     public void defaultMode() {
         //Other Controller Inputs
-        if (gamepad1.right_bumper && rightBumperCooldown()) {
+        if (gamepad1.right_bumper && !prevGamepad.right_bumper) {
             clawisclosed = !clawisclosed;
             if(clawisclosed){claw.setPosition(closed);}
             if(!clawisclosed){claw.setPosition(open);}
         }
 
-        if (gamepad1.left_bumper && leftBumperCooldown()) {
+        if (gamepad1.left_bumper && !prevGamepad.left_bumper) {
             fieldcentric = !fieldcentric;
         }
 
-        if (gamepad1.left_trigger > 0.5 && leftTriggerCooldown()) {
+        if (gamepad1.left_trigger > 0.5) {
 
         }
 
-        if (gamepad1.right_trigger > 0.5 && rightTriggerCooldown()) {
+        if (gamepad1.right_trigger > 0.5) {
 
         }
 
-        if (gamepad1.b && bCooldown()) {
+        if (gamepad1.b && !prevGamepad.b) {
 
         }
 
@@ -190,31 +189,31 @@ public class Teleop2 extends LinearOpMode {
             moveArm(Lift.getCurrentPosition(), ground, 5);
         }
 
-        if(gamepad1.x && xCooldown()) {
+        if(gamepad1.x && !prevGamepad.x) {
             moveArm(Lift.getCurrentPosition(), low, 5);
             targDist = lowDist;
         }
 
-        if(gamepad1.dpad_up && upCooldown()) {
+        if(gamepad1.dpad_up && !prevGamepad.dpad_up) {
             LiftEncoderValue = LiftEncoderValue + 25;
         }
 
-        if(gamepad1.dpad_down && downCooldown()) {
+        if(gamepad1.dpad_down && !prevGamepad.dpad_down) {
             LiftEncoderValue = LiftEncoderValue - 25;
         }
 
-        if(gamepad1.dpad_left && leftCooldown()) {
+        if(gamepad1.dpad_left && !prevGamepad.dpad_left) {
 
         }
 
-        if(gamepad1.dpad_right && rightCooldown()) {
+        if(gamepad1.dpad_right && !prevGamepad.dpad_right) {
 
         }
 
     }
 
     public void moveArm(int current, int target, int change){
-        adjust = (int) (current - target) / change;
+        adjust = (int) ((current - target) / change);
         dropStartTime = getRuntime();
         tick = change;
     }
@@ -241,54 +240,6 @@ public class Teleop2 extends LinearOpMode {
     }
 
     //Input Cooldowns
-    public boolean leftTriggerCooldown() {
-        if(getRuntime() - leftTriggerStartTime > 0.25) { //Must wait 250 milliseconds before input can be used again
-            leftTriggerStartTime = getRuntime();
-            return true;
-        }
-        return false;
-    }
-
-    public boolean leftBumperCooldown() {
-        if(getRuntime() - leftBumperStartTime > 0.25) { //Must wait 250 milliseconds before input can be used again
-            leftBumperStartTime = getRuntime();
-            return true;
-        }
-        return false;
-    }
-
-    public boolean rightTriggerCooldown() {
-        if(getRuntime() - rightTriggerStartTime > 0.25) { //Must wait 250 milliseconds before input can be used again
-            rightTriggerStartTime = getRuntime();
-            return true;
-        }
-        return false;
-    }
-
-    public boolean rightBumperCooldown() {
-        if(getRuntime() - rightBumperStartTime > 0.25) { //Must wait 250 milliseconds before input can be used again
-            rightBumperStartTime = getRuntime();
-            return true;
-        }
-        return false;
-    }
-
-    public boolean xCooldown() {
-        if(getRuntime() - xStartTime > .25) { //Must wait 250 milliseconds before input can be used again
-            xStartTime = getRuntime();
-            return true;
-        }
-        return false;
-    }
-
-    public boolean bCooldown() {
-        if(getRuntime() - bStartTime > .25) { //Must wait 250 milliseconds before input can be used again
-            bStartTime = getRuntime();
-            return true;
-        }
-        return false;
-    }
-
     public boolean yCooldown() {
         if(getRuntime() - yStartTime > .25) { //Must wait 250 milliseconds before input can be used again
             yStartTime = getRuntime();
@@ -300,38 +251,6 @@ public class Teleop2 extends LinearOpMode {
     public boolean aCooldown() {
         if(getRuntime() - aStartTime > .25) { //Must wait 250 milliseconds before input can be used again
             aStartTime = getRuntime();
-            return true;
-        }
-        return false;
-    }
-
-    public boolean upCooldown() {
-        if(getRuntime() - upStartTime > .25) { //Must wait 250 milliseconds before input can be used again
-            upStartTime = getRuntime();
-            return true;
-        }
-        return false;
-    }
-
-    public boolean downCooldown() {
-        if(getRuntime() - downStartTime > .25) { //Must wait 250 milliseconds before input can be used again
-            downStartTime = getRuntime();
-            return true;
-        }
-        return false;
-    }
-
-    public boolean leftCooldown() {
-        if(getRuntime() - leftStartTime > .25) { //Must wait 250 milliseconds before input can be used again
-            leftStartTime = getRuntime();
-            return true;
-        }
-        return false;
-    }
-
-    public boolean rightCooldown() {
-        if(getRuntime() - rightStartTime > .25) { //Must wait 250 milliseconds before input can be used again
-            rightStartTime = getRuntime();
             return true;
         }
         return false;
